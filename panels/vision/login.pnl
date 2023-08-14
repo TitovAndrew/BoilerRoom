@@ -1,0 +1,1156 @@
+V 14
+3
+LANG:10027 26 Вход в систему
+LANG:10000 9 Anmeldung
+LANG:10001 6 Log in
+PANEL,-1 -1 553 422 N "_3DFace" 1
+"$closeModules"
+"
+main()
+{
+  initPanel();
+}
+" 0
+ E E E E 1 -1 -1 0  0 -16
+""0  1
+E "#uses \"login_internal.ctc\"
+#uses \"msc_multiScreening.ctl\"
+// TFS 13335 include now in login_internal.ctc #uses \"loginHook.ctl\" // TFS 7166
+
+bool bDoPara;
+bool useNewPt;
+int  iCloseModules = 1;
+bool bAllowRemoteLogin=false;
+bool bActivatedSSO;
+
+doPasswKebFocusOut() // TFS 7166
+{
+  enableLogin(TRUE,name.text());
+}
+
+doNameKeybFocusOut() // TFS 7166
+{
+  string s;
+
+  getValue(\"\", \"text\", s);
+
+  if ( s != \"\" )
+  {
+    if ( getUserId(s) != DEFAULT_USERID )   // user exists
+    {
+      dyn_string userlangs, langs;
+      dyn_int userids;
+      int i;
+
+      dpGet(\"_Users.Language:_original.._value\", userlangs,
+            \"_Users.UserId:_original.._value\", userids);
+
+      getValue(\"langs\", \"items\", langs);
+
+      i = dynContains(langs, userlangs[dynContains(userids, getUserId(s))]);
+      if ( i <= 0 ) i = getActiveLang() + 1;
+      setValue(\"langs\", \"selectedPos\", i);
+    }
+  }
+  enableLogin(TRUE,name.text());
+}
+
+openGedi() // TFS 7166
+{
+  chkParaMm.state(0,FALSE);
+  logincheck(bAllowRemoteLogin,1); // open GEDI only if login was successful
+}
+
+openPara() // TFS 7166
+{
+  chkParaMm.state(0,FALSE);
+  logincheck(bAllowRemoteLogin,2); // open PARA only if login was successful
+}
+
+openSysMgm() // TFS 7166
+{
+  chkParaMm.state(0,FALSE);
+  logincheck(bAllowRemoteLogin,3); // open system management only if login was successful
+}
+
+openUi() // TFS 7166
+{
+  logincheck(bAllowRemoteLogin); // normal login
+}
+
+initPanel() // TFS 7166
+{
+  string sUser, sFullName, sDescription;
+  dyn_string dsGroups;
+  dyn_string     ds = dpTypes();
+  dyn_dyn_int    types;
+  dyn_dyn_string elements;
+  string module;
+
+  time t = getCurrentTime();
+
+  setMultiValue(\"name\",\"enabled\",FALSE,
+                \"password\",\"enabled\",FALSE,
+                \"langs\",\"enabled\",FALSE,
+                \"cmdOK\",\"enabled\",FALSE);
+
+  // original code
+
+  if(isFunctionDefined(\"HOOK_login\") && HOOK_login())
+    setMultiValue(\"name\",\"enabled\",FALSE, //IM 114372 Login bei Trusted Domains
+                  \"password\",\"enabled\",FALSE,
+                  // IM 109855
+                  //\"langs\",\"enabled\",FALSE,
+                  \"cmdOK\",\"enabled\",FALSE);
+
+  //auto login all UIs on one host at loggingIn in fist UI - default is FALSE
+  bAllowRemoteLogin = paCfgReadValueDflt(PROJ_PATH+CONFIG_REL_PATH+\"config\",  \"ui\", \"autoLoginOnSameHost\", 0);
+
+  if ( isDollarDefined(\"$closeModules\") )
+    iCloseModules = $closeModules;
+
+  iConfigNum = 1;  //cstoeg: for future use of user favourites management
+  useNewPt = false;
+  bDoPara = false;
+  enableLogin(FALSE);
+  setValue(\"chkParaMm\",\"enabled\",false); //cstoeg: Parabutton für Mulit Monitoring
+
+  if(dpExists(\"_Default_UiConfiguration\"))
+    useNewPt = true;
+
+  if(useNewPt)
+    ptms_createGlobals();  //cstoeg: Create global Variables
+
+  if (getUserPermission(4))
+  {
+    if ( dynContains(ds, \"_WinUserAdmin\") < 1 ) // TFS 7166
+    {
+      elements[1] = makeDynString(\"_WinUserAdmin\", \"\" );
+      elements[2] = makeDynString(  \"\",\"External\"  );
+      elements[3] = makeDynString(  \"\",\"Windows\"  );
+      types[1] = makeDynInt(DPEL_STRUCT);
+      types[2] = makeDynInt(0,DPEL_BOOL);
+      types[3] = makeDynInt(0,DPEL_BOOL);
+      dpTypeCreate(elements, types);
+    }
+    if ( !dpExists(\"_WinUserAdmin\") )
+    {
+      dpCreate(\"_WinUserAdmin\", \"_WinUserAdmin\");
+      dpSet(\"_WinUserAdmin.Windows:_original.._value\", false,
+            \"_WinUserAdmin.External:_original.._value\", false);
+    }
+    dynClear(elements);
+    dynClear(types);
+    if ( dynContains(ds, \"_WsPermission\") < 1 )
+    {
+      elements[1] = makeDynString(\"_WsPermission\", \"\" );
+      elements[2] = makeDynString(  \"\",\"DisplayName\"  );
+      elements[3] = makeDynString(  \"\",\"ManType\"  );
+      elements[4] = makeDynString(  \"\",\"GroupId\"  );
+      elements[5] = makeDynString(  \"\",\"Permission\"  );
+      types[1] = makeDynInt(DPEL_STRUCT);
+      types[2] = makeDynInt(0,DPEL_DYN_STRING);
+      types[3] = makeDynInt(0,DPEL_DYN_UINT);
+      types[4] = makeDynInt(0,DPEL_DYN_UINT);
+      types[5] = makeDynInt(0,DPEL_DYN_BIT32);
+      dpTypeCreate(elements, types);
+    }
+    if ( !dpExists(\"_WsPermission\") )
+      dpCreate(\"_WsPermission\", \"_WsPermission\");
+  }
+  else if ( dynContains(ds, \"_WinUserAdmin\") < 1  ||  dynContains(ds, \"_WsPermission\") < 1 )
+    throwError(makeError(\"\", PRIO_FATAL, ERR_SYSTEM, 0, \"DPT _WinUserAdmin or _WsPermission: no permission for upgrade!\"));
+
+  umUpgradeOldUM();
+  initHosts();
+
+  if(useNewPt && strpos(myModuleName(),\"Module\")<=0)
+    setValue(\"chkParaMm\",\"enabled\",true);
+
+  bActivatedSSO = activatedSSO();
+
+  int manId = convManIdToInt(EVENT_MAN,0);
+  int manId_2 = convManIdToInt(EVENT_MAN,0,0,2);
+
+  bool bEventConnection = isConnOpen(manId);
+  bool bEventConnection_2 = isConnOpen(manId_2);
+
+  int iKerbSec   = getKerberosSecurity(manId);
+  int iKerbSec_2 = getKerberosSecurity(manId_2);
+
+  bool bSSO;
+
+  if      ( bActivatedSSO || iKerbSec   >= 1 )
+    bSSO = TRUE;
+  else if ( bActivatedSSO || iKerbSec_2 >= 1 )
+    bSSO = TRUE;
+  else
+    bSSO = FALSE;
+
+  setMultiValue(\"name\",\"enabled\", !bSSO, // TFS 7166
+                \"password\",\"enabled\",!bSSO,
+                \"langs\",\"enabled\",!bSSO,
+                \"cmdOK\",\"enabled\",!bSSO);
+
+  if (bSSO)
+  {
+    string domain; // TFS 10267
+    getDomainOSUser(sUser, sFullName, sDescription, dsGroups , domain); //TFS 10267
+    getValue(\"name\",\"text\",sUser); // TFS 7166
+
+    if(isFunctionDefined(\"HOOK_readPreferredLanguage\"))
+      HOOK_readPreferredLanguage(sUser);//IM 114372 Auslesen der Sprache aus dem AD
+
+    bool answer = getUserPermission(4, getUserId(sUser));
+
+    if (!(isModeExtended() && getUserPermission(4, getUserId(sUser)))) //in Extended Mode Para, Gedi and SysMgm can be opended, if Permission 4 is set, so we don't login automatically
+    {
+      delay(3); //cstoeg: Wait 3 Seconds before login to allow user configuration
+
+      if(!bDoPara)
+      {
+        // IM 109855
+        loginSSO(TRUE, langs.text);
+      }
+      else //IM113666
+      {
+        enableLogin(TRUE);
+      }
+    }
+    else // allow to open gedi,para and sysmgm in extended mode
+    {
+      setUserNameSSO(sUser);
+      dpSet(myUiDpName()+\".UserName:_original.._value\",sUser);
+      enableLogin(true, getUserId(sUser));
+      return;
+    }
+  }
+  // not SSO
+  if(isFunctionDefined(\"HOOK_login\") && HOOK_login())
+    setMultiValue(\"name\",\"enabled\",TRUE, //IM 114372 Login bei Trusted Domains
+                  \"password2\",\"visible\",FALSE,
+                  \"password\",\"visible\",TRUE,
+                  \"password\",\"enabled\",TRUE,
+                  \"password\", \"text\", \"\",
+                    // IM 109855
+                    //\"langs\",\"enabled\",FALSE,
+                  \"cmdOK\",\"enabled\",TRUE);
+
+  int iSecurity;
+
+  if      ( bEventConnection )   // left EM
+    iSecurity = iKerbSec;
+  else if ( bEventConnection_2 ) // right EM
+    iSecurity = iKerbSec_2;
+  else // other default connection
+    iSecurity = getKerberosSecurity();
+
+  if (iSecurity > 0)
+  {
+    //getCurrentOSUser dauert sehr lange, darum nur ausfuehren, wenn benoetigt.
+    string domain; // TFS 10267
+    if ( strlen(sUser) == 0 )
+    {
+      getDomainOSUser(sUser, sFullName, sDescription, dsGroups ,domain); //TFS 10267
+      setMultiValue(\"name\",\"enabled\",FALSE,
+                    \"name\",\"text\", sUser,
+                    \"password\",\"visible\",FALSE,
+                    \"password2\",\"visible\",TRUE,
+                    \"password2\", \"text\", \"**********\",
+                    // IM 109855
+                    //\"langs\",\"enabled\",FALSE,
+                    \"cmdOK\",\"enabled\",FALSE);
+    }
+  }
+  else if (!bSSO) // if not SSO or Kerberos try to use config file user (if loginConfigFileUser==1 ) //IM 88872
+  {
+    string sConfigEntry;
+    int error = paCfgReadValue(PROJ_PATH+\"config/config\", \"ui\", \"loginConfigFileUser\", sConfigEntry);
+    if (error==0 && sConfigEntry!=\"\" && ((bool)sConfigEntry))
+    {
+      error = paCfgReadValue(PROJ_PATH+\"config/config\", \"general\", \"userName\", sConfigEntry);
+
+      if (error==0 && sConfigEntry!=\"\")
+      {
+        name.text = sConfigEntry;
+        enableLogin(TRUE);
+        setInputFocus(myModuleName(), myPanelName(), \"cmdOK\");
+        return;
+      }
+    }
+  }
+
+  if (bAllowRemoteLogin)
+    login_internal_waitForRemoteLogin();
+
+  string s;
+  getValue(\"name\", \"text\", s);
+
+  if ( bSSO && s != \"root\" && s != \"\" && !bDoPara )
+    enableLogin(FALSE);
+  else
+    enableLogin(TRUE);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+" 0
+ 4
+"CBRef" "0"
+"EClose" "main()
+{
+  if(globalExists(\"g_iNumberOfScreens\"))
+  {
+    removeGlobal(\"g_iNumberOfScreens\");
+    removeGlobal(\"g_sConfigName\");
+    removeGlobal(\"g_dbUsedScreens\"); // Used Screens 
+    removeGlobal(\"g_diXRes\"); // Resolution of Screen
+    removeGlobal(\"g_diYRes\");
+    removeGlobal(\"g_dsTemplates\");  // Templates of the specific Screens
+    removeGlobal(\"g_dsPanels\");     // Panels to Load
+    removeGlobal(\"g_dsCharacters\"); // Characters of Screen
+    removeGlobal(\"g_dsLCharacters\");
+    removeGlobal(\"g_dsRCharacters\");
+    removeGlobal(\"g_iActNumberOfScreens\");
+    removeGlobal(\"g_iDefaultResX\");
+    removeGlobal(\"g_iDefaultResY\");
+  }
+  
+  PanelOff();
+}" 0
+
+"LangSwitchMode" "1"
+"dpi" "96"
+0 0 0
+"login_background.png" -1 -1 554 424
+-1
+NC
+DISPLAY_LAYER, 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0
+LAYER, 0 
+1
+LANG:10027 6 Layer1
+2 6
+"lblLanguage"
+""
+1 233 274 E E E 1 E 0 E N "_3DText" E N "_Transparent" E E
+ E E
+8 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 0 
+LANG:10000 0 
+LANG:10001 0 
+
+4
+"sizePolicy" "Fixed Fixed"
+"layoutAlignment" "AlignCenter"
+"dashclr"N "_Transparent"
+"antiAliased" "0"
+E E 0 1 1 0 1 E U  0 E 235 274 271 289
+0 2 2 "0s" 0 0 0 192 0 0  235 274 1
+3
+LANG:10027 26 arial,-1,13,5,50,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,50,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,50,0,0,0,0,0
+0 3
+LANG:10027 9 Язык:
+LANG:10000 8 Sprache:
+LANG:10001 9 Language:
+2 3
+"lblPasword"
+""
+1 235 248 E E E 1 E 1 E N "_3DText" E N "_Transparent" E E
+ E E
+7 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 0 
+LANG:10000 0 
+LANG:10001 0 
+
+4
+"sizePolicy" "Fixed Fixed"
+"layoutAlignment" "AlignCenter"
+"dashclr"N "_Transparent"
+"antiAliased" "0"
+E E 0 1 1 0 1 E U  0 E 235 248 285 263
+0 0 0 "0s" 0 0 0 192 0 0  235 248 1
+3
+LANG:10027 26 arial,-1,13,5,50,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,50,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,50,0,0,0,0,0
+0 3
+LANG:10027 13 Пароль:
+LANG:10000 9 Passwort:
+LANG:10001 9 Password:
+2 4
+"lblUserName"
+""
+1 235 216 E E E 1 E 1 E N "_3DText" E N "_Transparent" E E
+ E E
+6 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 0 
+LANG:10000 0 
+LANG:10001 0 
+
+4
+"sizePolicy" "Fixed Fixed"
+"layoutAlignment" "AlignCenter"
+"dashclr"N "_Transparent"
+"antiAliased" "0"
+E E 0 1 1 0 1 E U  0 E 235 216 323 231
+0 0 0 "0s" 0 0 0 192 0 0  235 216 1
+3
+LANG:10027 26 arial,-1,13,5,50,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,50,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,50,0,0,0,0,0
+0 3
+LANG:10027 25 Пользователь:
+LANG:10000 13 Benutzername:
+LANG:10001 10 User name:
+2 10
+"lblDomainName"
+""
+1 235 186 E E E 1 E 0 E N "_3DText" E N "_Transparent" E E
+ E E
+10 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 0 
+LANG:10000 0 
+LANG:10001 0 
+
+4
+"sizePolicy" "Fixed Fixed"
+"layoutAlignment" "AlignCenter"
+"dashclr"N "_Transparent"
+"antiAliased" "0"
+E E 0 1 1 0 1 E U  0 E 235 186 281 201
+0 0 0 "0s" 0 0 0 192 0 0  235 186 1
+3
+LANG:10027 26 arial,-1,13,5,50,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,50,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,50,0,0,0,0,0
+0 3
+LANG:10027 11 Домен:
+LANG:10000 11 Domainname:
+LANG:10001 12 Domain name:
+14 0
+"name"
+""
+1 333 212 E E E 1 E 1 E N "_WindowText" E N "_Window" E E
+ E E
+1 0 0 0 0 0
+E "main()
+{
+  doNameKeybFocusOut();
+}
+" 0
+ E
+0
+3
+LANG:10027 31 Имя пользователя
+LANG:10000 12 Benutzername
+LANG:10001 9 User name
+
+1
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,40,0,0,0,0,0
+0  333 211 497 238
+3 "100s" 100 0 0 0 0 -1  E "main()
+{
+  return;
+  int        l;
+  string     name, lang; 
+  dyn_string langs;
+
+  
+  for (l = 1; l <= getNoOfLangs(); l++)
+    langs[l] = getLocale(l-1);
+  setValue(\"langs\", \"items\", langs);
+  setValue(\"langs\", \"selectedPos\", getActiveLang()+1);
+
+  dpGet(myUiDpName()+\".UserName:_online.._value\",name);
+
+  setMultiValue(\"name\",\"text\",name, 
+                \"password\",\"text\",\"\");
+  if (name!=\"\")
+    setInputFocus(myModuleName(),myPanelName(),\"password\");
+  else
+    setInputFocus(myModuleName(),myPanelName(),\"name\");
+
+  if ( name != \"\" )
+  {
+    if ( getUserId(name) != DEFAULT_USERID )   // user exists
+    {
+      dyn_string userlangs, langs;
+      dyn_int userids;
+      int i;
+
+      dpGet(\"_Users.Language:_original.._value\", userlangs,
+            \"_Users.UserId:_original.._value\", userids);
+      
+      getValue(\"langs\", \"items\", langs);
+      
+      i = dynContains(langs, userlangs[dynContains(userids, getUserId(name))]);
+      if ( i <= 0 ) i = 1;
+      setValue(\"langs\", \"selectedPos\", i);
+    }
+  }
+}
+
+" 0
+ "main()
+{
+  string s;
+  getValue(\"\", \"text\", s);
+  
+  if ( s != \"\" )
+  {
+    if ( getUserId(s) != DEFAULT_USERID )   // user exists
+    {
+      dyn_string userlangs, langs;
+      dyn_int userids;
+      int i;
+
+      dpGet(\"_Users.Language:_original.._value\", userlangs,
+            \"_Users.UserId:_original.._value\", userids);
+     
+      setValue(\"langs\", \"text\", userlangs[dynContains(userids, getUserId(s))]);
+    }
+    setInputFocus(myModuleName(), myPanelName(), \"password\");
+  }
+}
+
+
+
+
+
+" 0
+
+14 1
+"password"
+""
+1 333 243 E E E 1 E 1 E N "_WindowText" E N "_Window" E E
+ E E
+2 0 0 0 0 0
+E "main()
+{
+  doPasswKebFocusOut();
+}
+" 0
+ E
+0
+3
+LANG:10027 12 Пароль
+LANG:10000 8 Passwort
+LANG:10001 8 Password
+
+1
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,40,0,0,0,0,0
+0  333 242 497 269
+3 "0S" 0 0 0 0 0 -1  E E "main()
+{
+  bool bOkEn;
+  
+  bool bSSO;
+  if ( bActivatedSSO || getKerberosSecurity() >= 1 )
+    bSSO = TRUE;
+  else
+    bSSO = FALSE;
+
+  string s;
+  getMultiValue(\"name\", \"text\", s,
+                \"cmdOK\", \"enabled\", bOkEn);
+  
+  if ( bOkEn )
+    if ( ( bSSO && s != \"root\" && s != \"\") || ( !bSSO ) )
+      openUi();
+}
+
+
+
+
+
+
+
+
+
+" 0
+
+22 7
+"langs"
+""
+1 333 273 E E E 0 E 0 E N "_WindowText" E N "_Window" E E
+ E E
+3 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 8 Язык
+LANG:10000 7 Sprache
+LANG:10001 8 Language
+
+1
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,40,0,0,0,0,0
+0  333 272 497 299
+0
+
+"main()
+{
+             // Is login.pnl called from STD_INFOS?
+  bool       bStdCall = ( isDollarDefined(\"$STD_INFOS\") && getDollarValue(\"$STD_INFOS\")!=\"\" );
+
+  //this.visible=(!bStdCall);
+  //lblLanguage.visible=(!bStdCall);
+  dyn_string dsLangs;
+  for(int i = 0; i < getNoOfLangs(); i++)
+    dynAppend(dsLangs,getLocale(i));
+  langs.items = dsLangs;
+}" 0
+
+"main()
+{
+  setInputFocus(myModuleName(),myPanelName(),\"cmdOK\");
+}
+" 0
+
+E
+ 0 0
+14 9
+"TextField1"
+""
+1 335 182 E E E 0 E 0 E N "_WindowText" E N "_Window" E E
+ E E
+9 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 25 Текущий домен
+LANG:10000 15 Aktuelle Domain
+LANG:10001 14 Current domain
+
+1
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,40,0,0,0,0,0
+0  333 180 497 207
+3 "0s" 0 0 0 0 0 -1  E "main()
+{
+  string domainName;
+  int error;
+  error = getCurrentDomainName(domainName);
+  if (!(error || domainName == \"\"))
+  {
+    //this.visible	= TRUE;
+    //this.text	= domainName;
+    //lblDomainName.visible	= TRUE;
+  }
+  
+}" 0
+ E
+13 17
+"cmdOK"
+""
+1 149 253 E E E 1 E 1 E N "_ButtonText" E N "_Button" E E
+ E E
+16 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 26 Вход в систему
+LANG:10000 9 Einloggen
+LANG:10001 5 Login
+
+2
+"hoverbclr" "N \"STD_hover\""
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,40,0,0,0,0,0
+0  365 389 453 417
+
+T 
+3
+LANG:10027 2 OK
+LANG:10000 2 OK
+LANG:10001 2 OK
+"main()
+{
+  openUi();
+}
+
+
+" 0
+ E E E
+13 18
+"cmdCancel"
+""
+1 172 253 E E E 1 E 1 E N "_ButtonText" E N "_Button" E E
+ E E
+17 0 0 0 27 0
+E E E
+0
+3
+LANG:10027 16 Отменить
+LANG:10000 9 Abbrechen
+LANG:10001 6 Cancel
+
+2
+"hoverbclr" "N \"STD_hover\""
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,40,0,0,0,0,0
+0  458 389 546 417
+
+T 
+3
+LANG:10027 16 Отменить
+LANG:10000 9 Abbrechen
+LANG:10001 6 Cancel
+"main()
+{
+  if(globalExists(\"g_iNumberOfScreens\"))
+  {
+    removeGlobal(\"g_iNumberOfScreens\");
+    removeGlobal(\"g_sConfigName\");
+    removeGlobal(\"g_dbUsedScreens\"); // Used Screens 
+    removeGlobal(\"g_diXRes\"); // Resolution of Screen
+    removeGlobal(\"g_diYRes\");
+    removeGlobal(\"g_dsTemplates\");  // Templates of the specific Screens
+    removeGlobal(\"g_dsPanels\");     // Panels to Load
+    removeGlobal(\"g_dsCharacters\"); // Characters of Screen
+    removeGlobal(\"g_dsLCharacters\");
+    removeGlobal(\"g_dsRCharacters\");
+    removeGlobal(\"g_iActNumberOfScreens\");
+    removeGlobal(\"g_iDefaultResX\");
+    removeGlobal(\"g_iDefaultResY\");
+  }
+  
+  PanelOff();
+}" 0
+ E E E
+13 19
+"help"
+""
+1 25 254 E E E 1 E 1 E N "STD_button_text" E N "STD_pushbutton_back" E E
+ E E
+17 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 14 Справка
+LANG:10000 5 Hilfe
+LANG:10001 4 Help
+
+2
+"hoverbclr" "N \"STD_hover\""
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,40,0,0,0,0,0
+0  7 389 95 417
+
+T 
+3
+LANG:10027 14 Справка
+LANG:10000 5 Hilfe
+LANG:10001 4 Help
+"main()
+{
+  //if (dpExists(\"ApplicationProperties\"))
+    //std_help(\"da_login\");
+  //else
+    //std_help(\"login\");
+  EP_childPanelOn();
+}
+void EP_childPanelOn()
+{
+  ChildPanelOnCentralModal(\"AboutProg.pnl\",
+      \"AboutProg\",
+      makeDynString(\"\"));
+}
+
+// SimpleCtrlScript {EP_childPanelOn}
+// Function {ChildPanelOnCentralModal}
+// File {AboutProg.pnl}
+// Panel {AboutProg}
+// Parent {}
+// Module {}
+// OffsetX {0}
+// OffsetY {0}
+// SimpleCtrlScriptEnd {EP_childPanelOn}
+" 0
+ E E E
+13 24
+"buGedi"
+""
+1 503 181 E E E 1 E 1 E N "_ButtonText" E N "_Button" E E
+ E E
+21 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 4 Gedi
+LANG:10000 4 Gedi
+LANG:10001 4 Gedi
+
+2
+"hoverbclr" "N \"STD_hover\""
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 33 MS Shell Dlg,-1,11,5,50,0,0,0,0,0
+LANG:10000 33 MS Shell Dlg,-1,11,5,50,0,0,0,0,0
+LANG:10001 33 MS Shell Dlg,-1,11,5,50,0,0,0,0,0
+0  501 179 535 208
+
+P 
+4294967295
+"pictures/gedi.png"
+3
+LANG:10027 12 PUSH_BUTTON1
+LANG:10000 12 PUSH_BUTTON1
+LANG:10001 12 PUSH_BUTTON1
+"main()
+{
+  openGedi();
+//    ModuleOn( \"GEDI\", -2, -2, 0, 0, 1, 1, \"None\",0); 
+}" 0
+ E E E
+13 25
+"buPara"
+""
+1 503 212 E E E 1 E 0 E N "_ButtonText" E N "_Button" E E
+ E E
+23 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 4 Para
+LANG:10000 4 Para
+LANG:10001 4 Para
+
+2
+"hoverbclr" "N \"STD_hover\""
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 33 MS Shell Dlg,-1,11,5,50,0,0,0,0,0
+LANG:10000 33 MS Shell Dlg,-1,11,5,50,0,0,0,0,0
+LANG:10001 33 MS Shell Dlg,-1,11,5,50,0,0,0,0,0
+0  501 210 535 239
+
+P 
+4294967295
+"pictures/para.png"
+3
+LANG:10027 12 PUSH_BUTTON1
+LANG:10000 12 PUSH_BUTTON1
+LANG:10001 12 PUSH_BUTTON1
+"main()
+{
+//  ModuleOn( \"PARA\", -2, -2, 0, 0, 1, 1, \"None\", 2); 
+  openPara();
+}" 0
+ E E E
+13 26
+"buSysMgm"
+""
+1 503 243 E E E 1 E 0 E N "_ButtonText" E N "_Button" E E
+ E E
+25 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 37 Управление системой
+LANG:10000 17 System Management
+LANG:10001 17 System management
+
+2
+"hoverbclr" "N \"STD_hover\""
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 33 MS Shell Dlg,-1,11,5,50,0,0,0,0,0
+LANG:10000 33 MS Shell Dlg,-1,11,5,50,0,0,0,0,0
+LANG:10001 33 MS Shell Dlg,-1,11,5,50,0,0,0,0,0
+0  501 241 535 270
+
+P 
+4294967295
+"pictures/sysmgm.png"
+3
+LANG:10027 12 PUSH_BUTTON1
+LANG:10000 12 PUSH_BUTTON1
+LANG:10001 12 PUSH_BUTTON1
+"main()
+{
+  openSysMgm();
+}" 0
+ E E E
+20 28
+"chkParaMm"
+""
+1 236 304 E E E 1 E 0 E N "_3DText" E N "_3DFace" E E
+ E E
+28 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 0 
+LANG:10000 0 
+LANG:10001 0 
+
+1
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 26 arial,-1,13,5,50,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,50,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,50,0,0,0,0,0
+0  234 302 575 326
+1
+T 
+3
+LANG:10027 74 Изменить мультимониторную конфигурацию
+LANG:10000 49 Benutzerspezifische Monitor-Konfiguration ändern
+LANG:10001 48 Change user-specific multi-monitor configuration
+
+0 
+1
+LANG:10027 0 
+E E
+0 0 0 0 0
+1
+E E
+E"main(int button, int state)
+{
+  if(state)
+    bDoPara = true;
+  else
+    bDoPara = false;
+    
+}" 0
+1 46 0 "" 0
+0
+14 39
+"password2"
+""
+1 333 243 E E E 0 E 0 E N "_WindowText" E N "_Window" E E
+ E E
+33 0 0 0 0 0
+E "main()
+{
+  doPasswKebFocusOut();
+}
+" 0
+ E
+0
+3
+LANG:10027 12 Пароль
+LANG:10000 8 Passwort
+LANG:10001 8 Password
+
+1
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,40,0,0,0,0,0
+0  333 242 497 269
+2 "100S" 100 0 0 0 0 -1  E E "main()
+{
+  bool bOkEn;
+  
+  bool bSSO;
+  if ( bActivatedSSO || getKerberosSecurity() >= 1 )
+    bSSO = TRUE;
+  else
+    bSSO = FALSE;
+
+  string s;
+  getMultiValue(\"name\", \"text\", s,
+                \"cmdOK\", \"enabled\", bOkEn);
+  
+  if ( bOkEn )
+    if ( ( bSSO && s != \"root\" && s != \"\") || ( !bSSO ) )
+      openUi();
+}
+
+
+
+
+
+
+
+
+
+" 0
+
+2 42
+"infoITC"
+""
+1 235 340 E E E 1 E 0 E N "_3DText" E N "_Transparent" E E
+ E E
+34 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 0 
+LANG:10000 0 
+LANG:10001 0 
+
+4
+"sizePolicy" "Fixed Fixed"
+"layoutAlignment" "AlignCenter"
+"dashclr"N "_Transparent"
+"antiAliased" "0"
+E E 0 1 1 0 1 E U  0 E 235 340 525 371
+0 0 0 "0s" 0 0 0 192 0 0  235 340 2
+3
+LANG:10027 26 Arial,-1,13,5,75,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,75,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,75,0,0,0,0,0
+0 3
+LANG:10027 47 Info: On the ITC-Client all times are displayed
+LANG:10000 43 Info: Auf dem ITC-Client werden alle Zeiten
+LANG:10001 47 Info: On the ITC-Client all times are displayed
+3
+LANG:10027 26 Arial,-1,13,5,75,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,75,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,75,0,0,0,0,0
+0 3
+LANG:10027 12 as UTC time!
+LANG:10000 25 als UTC-Zeit dargestellt!
+LANG:10001 12 as UTC time!
+13 45
+"help2"
+""
+1 122.5714285714286 254 E E E 1 E 1 E N "STD_button_text" E N "STD_pushbutton_back" E E
+ E E
+35 0 0 0 0 0
+E E E
+0
+3
+LANG:10027 14 Справка
+LANG:10000 5 Hilfe
+LANG:10001 4 Help
+
+2
+"hoverbclr" "N \"STD_hover\""
+"layoutAlignment" "AlignCenter"
+3
+LANG:10027 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10000 26 Arial,-1,13,5,40,0,0,0,0,0
+LANG:10001 26 Arial,-1,13,5,40,0,0,0,0,0
+0  100 389 212 417
+
+T 
+3
+LANG:10027 29 О разработчиках
+LANG:10000 5 Hilfe
+LANG:10001 4 Help
+"main()
+{
+  //if (dpExists(\"ApplicationProperties\"))
+    //std_help(\"da_login\");
+  //else
+    //std_help(\"login\");
+  EP_childPanelOn();
+}
+
+void EP_childPanelOn()
+{
+  ChildPanelOnCentralModal(\"AboutUs.pnl\",
+      \"AboutUs\",
+      makeDynString(\"\"));
+}
+
+// SimpleCtrlScript {EP_childPanelOn}
+// Function {ChildPanelOnCentralModal}
+// File {AboutUs.pnl}
+// Panel {AboutUs}
+// Parent {}
+// Module {}
+// OffsetX {0}
+// OffsetY {0}
+// SimpleCtrlScriptEnd {EP_childPanelOn}
+" 0
+ E E E
+0
+LAYER, 1 
+1
+LANG:10027 6 Layer2
+0
+LAYER, 2 
+1
+LANG:10027 6 Layer3
+0
+LAYER, 3 
+1
+LANG:10027 6 Layer4
+0
+LAYER, 4 
+1
+LANG:10027 6 Layer5
+0
+LAYER, 5 
+1
+LANG:10027 6 Layer6
+0
+LAYER, 6 
+1
+LANG:10027 6 Layer7
+0
+LAYER, 7 
+1
+LANG:10027 6 Layer8
+0
+3 0 "PANEL_REF0" -1
+"layoutAlignment" "AlignCenter"
+"" ""
+"objects_parts/STD_OBJECTS/ButtonBarBackground.pnl" 188 376 T 30 1.260521042084168 0 1 -236.9779559118236 6
+0
+0

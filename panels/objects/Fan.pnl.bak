@@ -1,0 +1,189 @@
+V 14
+1
+LANG:10027 0 
+PANEL,-1 -1 199 179 N "_3DFace" 0
+E E E E E 1 -1 -1 0  49.74999999999994 14.09090909090909
+""0  1
+E E 3
+"CBRef" "1"
+"EClose" E
+"dpi" "96"
+0 0 0
+""
+DISPLAY_LAYER, 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0
+LAYER, 0 
+1
+LANG:10027 0 
+13 1
+"PUSH_BUTTON1"
+""
+1 50 20 E E E 1 E 1 E N "_ButtonText" E N "WF_PanelBackground" E E
+ E E
+0 0 0 0 0 0
+E E E
+8
+1
+LANG:10027 0 
+
+1
+"layoutAlignment" "AlignNone"
+1
+LANG:10027 37 MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0
+0  48 12.09090909090909 159.7499999999999 42.09090909090909
+
+T 
+1
+LANG:10027 12 Ремонт
+E E E E
+13 2
+"PUSH_BUTTON2"
+""
+1 49.74999999999994 46.00000000000001 E E E 1 E 1 E N "_ButtonText" E N "WF_PanelBackground" E E
+ E E
+1 0 0 0 0 0
+E E E
+8
+1
+LANG:10027 0 
+
+1
+"layoutAlignment" "AlignNone"
+1
+LANG:10027 37 MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0
+0  47.74999999999994 38.0909090909091 105.6249999999999 68.09090909090909
+
+T 
+1
+LANG:10027 2 ON
+E E E E
+13 3
+"PUSH_BUTTON3"
+""
+1 103.6874999999999 46.00000000000001 E E E 1 E 1 E N "_ButtonText" E N "WF_PanelBackground" E E
+ E E
+2 0 0 0 0 0
+E E E
+8
+1
+LANG:10027 0 
+
+1
+"layoutAlignment" "AlignNone"
+1
+LANG:10027 37 MS Shell Dlg 2,8.25,-1,5,50,0,0,0,0,0
+0  101.6874999999999 38.0909090909091 159.5624999999999 68.09090909090909
+
+T 
+1
+LANG:10027 3 OFF
+E E E E
+7 4
+"ELLIPSE1"
+""
+1 195.5 162.5 E E E 1 E 1 E N {0,0,0} E N {255,255,255} E E
+ E E
+3 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "1"
+E E 0 1 3 2 1 E 1 0 1 -91.37500000000011 -49 1 E 195.5 162.5 26.5 26.5
+4 7
+"LINE1"
+""
+1 86 95 E E E 1 E 1 E N {0,0,0} E N {255,255,255} E E
+ E E
+6 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "1"
+E E 0 1 3 2 1 E  86 95 122 132
+4 9
+"LINE3"
+""
+1 122 95.00000000000001 E E E 1 E 1 E N {0,0,0} E N {255,255,255} E E
+ E E
+8 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "1"
+E E 0 1 3 2 1 E  122 95.00000000000001 86 132
+4 10
+"LINE4"
+""
+1 104 87 E E E 1 E 1 E N {0,0,0} E N {255,255,255} E E
+ E E
+9 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "1"
+E E 0 1 3 2 1 E  104 87 104 140
+4 11
+"LINE5"
+""
+1 77.62499999999989 113.5 E E E 1 E 1 E N {0,0,0} E N {255,255,255} E E
+ E E
+10 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "1"
+E E 0 1 3 2 1 E  77.62499999999989 113.5 130.6249999999999 113.5
+0
+LAYER, 1 
+1
+LANG:10027 0 
+0
+LAYER, 2 
+1
+LANG:10027 0 
+0
+LAYER, 3 
+1
+LANG:10027 0 
+0
+LAYER, 4 
+1
+LANG:10027 0 
+0
+LAYER, 5 
+1
+LANG:10027 0 
+0
+LAYER, 6 
+1
+LANG:10027 0 
+0
+LAYER, 7 
+1
+LANG:10027 0 
+0
+0

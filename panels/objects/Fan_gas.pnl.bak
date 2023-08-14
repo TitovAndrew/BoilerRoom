@@ -1,0 +1,478 @@
+V 14
+1
+LANG:10027 0 
+PANEL,-1 -1 248 238 N "_3DFace" 0
+"main()
+{
+  string requestisOn = \"System1:gas_fan.States.isOn\";
+  string requestCanWork = \"System1:gas_fan.States.CanWork\";
+  string requestRepair = \"System1:gas_fan.States.Repair\";
+  dpConnect(\"colorFan\", requestisOn, requestCanWork, requestRepair);
+}
+
+colorFan(string dpName)
+{
+  bool isOn, canWork, inRepair;
+  dpGet(\"System1:gas_fan.States.isOn\", isOn);
+  dpGet(\"System1:gas_fan.States.CanWork\", canWork);
+  dpGet(\"System1:gas_fan.States.Repair\", inRepair);
+  if (!canWork)
+  {
+    if (!inRepair) setValue(\"ELLIPSE1\", \"backCol\", \"red\"); 
+    else setValue(\"ELLIPSE1\", \"backCol\", \"blue\"); 
+    setValue(\"TEXT_FIELD1\", \"visible\", false);
+    if (isOn){
+      dpSet(\"System1:gas_fan.States.isOn\", false);
+      
+    }
+  }
+  else
+  {
+    if (isOn){
+      setValue(\"ELLIPSE1\", \"backCol\", \"green\");
+      setValue(\"TEXT_FIELD1\", \"visible\", true);
+    }
+    else{
+      setValue(\"ELLIPSE1\", \"backCol\", \"yellow\");
+      setValue(\"TEXT_FIELD1\", \"visible\", false);
+    }
+  }
+}" 0
+ E E E E 1 -1 -1 0  49.74999999999994 14.09090909090909
+""0  1
+E E 3
+"CBRef" "1"
+"EClose" E
+"dpi" "96"
+0 0 0
+""
+DISPLAY_LAYER, 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0
+LAYER, 0 
+1
+LANG:10027 0 
+6 12
+"RECTANGLE1"
+""
+1 40 0 E E E 1 E 1 E N {0,0,0} E N "_Transparent" E E
+ E E
+11 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "0"
+E E 0 1 3 2 1 E 1.7125 0 1.744444444444444 -33 8.500000000000014 1 E 40 0 120 90
+13 1
+"PUSH_BUTTON1"
+""
+1 50 20 E E E 1 E 1 E N "_ButtonText" E N "WF_PanelBackground" E E
+ E E
+0 0 0 0 0 0
+E E E
+8
+1
+LANG:10027 0 
+
+1
+"layoutAlignment" "AlignNone"
+1
+LANG:10027 35 MS Shell Dlg 2,-1,11,5,50,0,0,0,0,0
+0  48 12.09090909090909 159.6666666666666 42.09090909090909
+
+T 
+1
+LANG:10027 12 Ремонт
+"main()
+{
+  fixFem();
+}
+
+void fixFem()
+{
+  dpSetWait(\"System1:gas_fan.States.Repair:_original.._value\", true);
+  //setValue(\"ELLIPSE1\", \"backCol\", \"white\");
+  delay(3);
+  dpSetWait(\"System1:gas_fan.States.CanWork:_original.._value\", true);
+  dpSetWait(\"System1:gas_fan.States.Repair:_original.._value\", false);
+  //dpSetWait(\"System1:gas_fan.States.IsOn:_original.._value\", false);
+
+}" 0
+ E E "// SimpleCtrlScriptStart {valid}
+main()
+{
+  EP_setEnabled();
+}
+
+
+void EP_setEnabled()
+{
+  dyn_errClass err;
+
+  if( !dpExists( \"System1:gas_fan.States.CanWork:_online.._value\"))
+  {
+    setValue(\"\", \"color\", \"_dpdoesnotexist\");
+    return;
+  }
+
+  dpConnect(\"EP_setEnabledCB\",
+            \"System1:gas_fan.States.CanWork:_online.._value\");
+  err = getLastError();
+  if (dynlen(err) > 0)
+    setValue(\"\", \"color\", \"_dpdoesnotexist\");
+
+}
+
+
+void EP_setEnabledCB(string dp, bool boNewValue)
+{
+    setValue(\"\", \"enabled\", !boNewValue);
+}
+
+// SimpleCtrlScript {EP_setEnabled}
+// DP {System1:gas_fan.States.CanWork}
+// DPConfig {:_online.._value}
+// DPType {bool}
+// Active {0}
+// Operator {less}
+// Value {TRUE}
+// SimpleCtrlScriptEnd {EP_setEnabled}
+" 0
+
+13 2
+"PUSH_BUTTON2"
+""
+1 50 45.90909090909091 E E E 1 E 1 E N "_ButtonText" E N "WF_PanelBackground" E E
+ E E
+1 0 0 0 0 0
+E E E
+8
+1
+LANG:10027 0 
+
+1
+"layoutAlignment" "AlignNone"
+1
+LANG:10027 35 MS Shell Dlg 2,-1,11,5,50,0,0,0,0,0
+0  48 38 105.875 68
+
+T 
+1
+LANG:10027 2 ON
+"// SimpleCtrlScriptStart {invalid}
+main()
+{
+  EP_setDP();
+}
+
+void EP_setDP()
+{
+  dyn_errClass err;
+
+  dpSetWait(\"System1:gas_fan.States.isOn:_original.._value\", 1);
+  err = getLastError();
+  if (dynlen(err) > 0)
+    errorDialog(err);
+}
+
+// SimpleCtrlScript {EP_setDP}
+// DP1 {System1:gas_fan.state.isOn}
+// Config1 {:_original.._value}
+// Type1 {bool}
+// Value1 {1}
+// SimpleCtrlScriptEnd {EP_setDP}
+" 0
+ E E "// SimpleCtrlScriptStart {valid}
+main()
+{
+  EP_setEnabled();
+}
+
+void EP_setEnabled()
+{
+  dyn_errClass err;
+
+  if( !dpExists( \"System1:gas_fan.States.CanWork:_online.._value\"))
+  {
+    setValue(\"\", \"color\", \"_dpdoesnotexist\");
+    return;
+  }
+
+  dpConnect(\"EP_setEnabledCB\",
+            \"System1:gas_fan.States.CanWork:_online.._value\");
+  err = getLastError();
+  if (dynlen(err) > 0)
+    setValue(\"\", \"color\", \"_dpdoesnotexist\");
+
+}
+
+
+void EP_setEnabledCB(string dp, bool boNewValue)
+{
+    setValue(\"\", \"enabled\", boNewValue);
+}
+
+// SimpleCtrlScript {EP_setEnabled}
+// DP {System1:gas_fan.States.CanWork}
+// DPConfig {:_online.._value}
+// DPType {bool}
+// Active {1}
+// Operator {less}
+// Value {TRUE}
+// SimpleCtrlScriptEnd {EP_setEnabled}
+" 0
+
+13 3
+"PUSH_BUTTON3"
+""
+1 104.0312499999999 45.94421487603307 E E E 1 E 1 E N "_ButtonText" E N "WF_PanelBackground" E E
+ E E
+2 0 0 0 0 0
+E E E
+8
+1
+LANG:10027 0 
+
+1
+"layoutAlignment" "AlignNone"
+1
+LANG:10027 35 MS Shell Dlg 2,-1,11,5,50,0,0,0,0,0
+0  102.0312499999999 38.04545454545455 159.7499999999999 68
+
+T 
+1
+LANG:10027 3 OFF
+"// SimpleCtrlScriptStart {invalid}
+main()
+{
+  EP_setDP();
+}
+
+void EP_setDP()
+{
+  dyn_errClass err;
+
+  dpSetWait(\"System1:gas_fan.States.isOn:_original.._value\", 0);
+  err = getLastError();
+  if (dynlen(err) > 0)
+    errorDialog(err);
+}
+
+// SimpleCtrlScript {EP_setDP}
+// DP1 {System1:gas_fan.state.isOn}
+// Config1 {:_original.._value}
+// Type1 {bool}
+// Value1 {0}
+// SimpleCtrlScriptEnd {EP_setDP}
+" 0
+ E E "// SimpleCtrlScriptStart {valid}
+main()
+{
+  EP_setEnabled();
+}
+
+void EP_setEnabled()
+{
+  dyn_errClass err;
+
+  if( !dpExists( \"System1:gas_fan.States.CanWork:_online.._value\"))
+  {
+    setValue(\"\", \"color\", \"_dpdoesnotexist\");
+    return;
+  }
+
+  dpConnect(\"EP_setEnabledCB\",
+            \"System1:gas_fan.States.CanWork:_online.._value\");
+  err = getLastError();
+  if (dynlen(err) > 0)
+    setValue(\"\", \"color\", \"_dpdoesnotexist\");
+
+}
+
+
+void EP_setEnabledCB(string dp, bool boNewValue)
+{
+    setValue(\"\", \"enabled\", boNewValue);
+}
+
+// SimpleCtrlScript {EP_setEnabled}
+// DP {System1:gas_fan.States.CanWork}
+// DPConfig {:_online.._value}
+// DPType {bool}
+// Active {1}
+// Operator {less}
+// Value {TRUE}
+// SimpleCtrlScriptEnd {EP_setEnabled}
+" 0
+
+7 4
+"ELLIPSE1"
+""
+1 195.5 162.5 E E E 1 E 1 E N {0,0,0} E N {255,255,255} E E
+ E E
+3 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "1"
+E E 0 1 3 2 1 E 1 0 1 -91.80978260869577 -62.4782608695652 1 E 195.5 162.5 26.5 26.5
+4 7
+"LINE1"
+""
+1 85.56521739130434 81.52173913043478 E E E 1 E 1 E N {0,0,0} E N {255,255,255} E E
+ E E
+6 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "1"
+E E 0 1 3 2 1 E  85.56521739130433 81.52173913043478 121.5652173913043 118.5217391304348
+4 9
+"LINE3"
+""
+1 121.5652173913043 81.5217391304348 E E E 1 E 1 E N {0,0,0} E N {255,255,255} E E
+ E E
+8 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "1"
+E E 0 1 3 2 1 E  121.5652173913043 81.52173913043478 85.56521739130433 118.5217391304348
+4 10
+"LINE4"
+""
+1 103.5652173913043 73.52173913043478 E E E 1 E 1 E N {0,0,0} E N {255,255,255} E E
+ E E
+9 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "1"
+E E 0 1 3 2 1 E  103.5652173913043 73.52173913043478 103.5652173913043 126.5217391304348
+4 11
+"LINE5"
+""
+1 77.19021739130423 100.0217391304348 E E E 1 E 1 E N {0,0,0} E N {255,255,255} E E
+ E E
+10 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+3
+"layoutAlignment" "AlignNone"
+"dashclr"N "_Transparent"
+"antiAliased" "1"
+E E 0 1 3 2 1 E  77.19021739130423 100.0217391304348 130.1902173913042 100.0217391304348
+14 13
+"TEXT_FIELD1"
+""
+1 54 142.6940245939725 E E E 1 E 1 E N "_WindowText" E N "_Window" E E
+ E E
+12 0 0 0 0 0
+E E E
+0
+1
+LANG:10027 0 
+
+1
+"layoutAlignment" "AlignNone"
+1
+LANG:10027 35 MS Shell Dlg 2,-1,11,5,50,0,0,0,0,0
+0  52 136.5000000000001 156 160.4216168213691
+2 "0s" 0 0 0 0 0 -1  E "// SimpleCtrlScriptStart {invalid}
+main()
+{
+  EP_textFieldIn();
+}
+
+void EP_textFieldIn()
+{
+  dyn_errClass err;
+
+  if( !dpExists( \"System1:gas_fan.Inputs.PercentageWork:_online.._value\"))
+  {
+    setValue(\"\", \"color\", \"_dpdoesnotexist\");
+    return;
+  }
+
+  dpConnect(\"EP_textFieldInCB\",
+            \"System1:gas_fan.Inputs.PercentageWork:_online.._value\");
+  err = getLastError();
+  if (dynlen(err) > 0)
+    setValue(\"\", \"color\", \"_dpdoesnotexist\");
+
+}
+
+
+void EP_textFieldInCB(string dp, int iNewValue)
+{
+  int NewValue;
+  NewValue = iNewValue * 145;
+  DebugN(NewValue);
+  setValue(\"\", \"text\", dpValToString(dp, NewValue, TRUE) + \" м3/час\" );
+}
+
+// SimpleCtrlScript {EP_textFieldIn}
+// DP {System1:gas_fan.Inputs.PercentageWork}
+// DPConfig {:_online.._value}
+// DPType {int}
+// UseDPUnit {TRUE}
+// UseDPFormat {TRUE}
+// SimpleCtrlScriptEnd {EP_textFieldIn}
+" 0
+ E
+0
+LAYER, 1 
+1
+LANG:10027 0 
+0
+LAYER, 2 
+1
+LANG:10027 0 
+0
+LAYER, 3 
+1
+LANG:10027 0 
+0
+LAYER, 4 
+1
+LANG:10027 0 
+0
+LAYER, 5 
+1
+LANG:10027 0 
+0
+LAYER, 6 
+1
+LANG:10027 0 
+0
+LAYER, 7 
+1
+LANG:10027 0 
+0
+0
